@@ -5,24 +5,46 @@
       "provider": "groq",
       "id": "openai/gpt-oss-120b",
       "baseUrl": "https://api.groq.com/openai/v1",
-      "apiKey": { "source": "env", "provider": "default", "id": "GROQ_API_KEY" }
+      "apiKey": {
+        "source": "env",
+        "provider": "default",
+        "id": "GROQ_API_KEY"
+      }
     },
     "fallbackModel": {
-      "provider": "ollama",
-      "id": "qwen2.5-coder",
-      "baseUrl": "http://localhost:11434/v1",
-      "apiKey": "ollama"
+      "provider": "groq",
+      "id": "llama-3.3-70b-versatile",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "apiKey": {
+        "source": "env",
+        "provider": "default",
+        "id": "GROQ_API_KEY"
+      }
     }
   },
   "channels": {
     "slack": {
       "enabled": true,
       "mode": "socket",
-      "appToken": { "source": "env", "provider": "default", "id": "SLACK_APP_TOKEN" },
-      "botToken": { "source": "env", "provider": "default", "id": "SLACK_BOT_TOKEN" }
+      "appToken": {
+        "source": "env",
+        "provider": "default",
+        "id": "SLACK_APP_TOKEN"
+      },
+      "botToken": {
+        "source": "env",
+        "provider": "default",
+        "id": "SLACK_BOT_TOKEN"
+      },
+      "listenChannels": ["agent-coder"],
+      "logChannel": "agent-log"
     }
   },
   "workspace": {
     "root": "c:/nmt"
+  },
+  "agent": {
+    "name": "OpenClaw",
+    "persona": "You are OpenClaw, a coding agent. You write code, run shell commands, and report results. Always respond in three sections: What I Did, What's Left, What Needs Your Call."
   }
 }
