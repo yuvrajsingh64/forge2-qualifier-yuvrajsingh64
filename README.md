@@ -42,7 +42,7 @@ UI runs at `http://localhost:5173`.
 
 ## Live URL
 
-https://forge2-qualifier-yuvrajsingh64.vercel.app
+https://yuvrajsingh64.github.io/forge2-qualifier-yuvrajsingh64/
 
 ## Repo structure
 
