@@ -1,0 +1,28 @@
+# Laravel
+backend/.env
+backend/vendor/
+backend/node_modules/
+backend/storage/logs/*
+backend/storage/app/private/*
+backend/bootstrap/cache/*
+backend/*.sqlite
+backend/*.sqlite-journal
+
+# React / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Env files
+.env
+*.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent configs with secrets
+# (commit sanitised versions only)
+hermes.config.secret.json
