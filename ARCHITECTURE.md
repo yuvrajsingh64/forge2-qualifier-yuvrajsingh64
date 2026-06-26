@@ -1,48 +1,83 @@
-# Architecture
+# Architecture — Forge 2 Sprint 02
 
-## Agents
+## Two-Agent System
 
-### Hermes — orchestrator
+### Hermes (Orchestrator — The Brain)
+- **Role**: Decomposes goals, assigns tasks, tracks sprint progress, holds cross-session memory
+- **Qualifier model**: Gemini 2.5 Flash (free tier)
+- **Sprint Day model**: DeepSeek V4 Pro via EastRouter (strong reasoning, 200K context)
+- **Channel**: Posts plans to `#agent-orchestrator`, assigns tasks via `#sprint-main`
+- **Memory**: Persistent — recalls repo name, tech decisions, task history across sessions
+- **Autonomous run**: Heartbeat cron every 15 min into `#agent-log`
 
-Plans goals, breaks them into tasks, holds persistent memory across sessions, and posts progress on a schedule. Routed to Gemini 2.5 Flash: the 1M-token context window is useful when the full codebase context fits in one prompt.
+### OpenClaw (Coding Agent — The Hands)
+- **Role**: Receives tasks, writes code, runs tests, commits to GitHub, reports results
+- **Qualifier model**: Groq llama-3.3-70b-versatile (fast, free)
+- **Sprint Day model**: Kimi K2.6 via EastRouter (coding-optimised, cheap per token)
+- **Fallback**: Qwen2.5-Coder via Ollama (local, unlimited, offline-safe)
+- **Channel**: Listens on `#agent-coder`, reports results there
 
-Posts plans and status to `#sprint-main`. Fires a cron every ten minutes to drop a one-line progress note in `#agent-log` — no human prompt needed.
+## Model Routing Strategy (Sprint Day — $50 EastRouter credits)
 
-### OpenClaw — coding agent
+| Task | Model | Why |
+|---|---|---|
+| Sprint planning, goal decomposition | DeepSeek V4 Pro | Best reasoning for architecture decisions |
+| Code generation, file editing | Kimi K2.6 | Fast, cheap, coding-optimised |
+| Error classification, debugging | DeepSeek V4 Pro | Needs judgment, not just speed |
+| Status reports, formatting | MiniMax M2.7 | Simple structured output, lowest cost |
+| Local fallback (offline/rate-limit) | Qwen2.5-Coder via Ollama | Free, unlimited, runs locally |
 
-Receives tasks in `#agent-coder`, writes and runs code, then reports back in the same channel. Routed to Groq `openai/gpt-oss-120b` for speed. Falls back to Ollama `qwen2.5-coder` locally when the Groq rate limit is hit — Ollama has no cap.
+**Rule**: 70% cheap model (Kimi) / 25% mid (DeepSeek) / 5% premium → near-identical quality at 15% cost.
 
-## Channel layout
+## EastRouter Integration
 
-| Channel | Who uses it |
-|---|---|
-| `#sprint-main` | Human posts goals; Hermes posts plans and status |
-| `#agent-coder` | Hermes assigns tasks; OpenClaw reports results |
-| `#agent-log` | Autonomous cron output and raw activity |
+Base URL: `https://api.eastrouter.com/v1`
+Drop-in OpenAI-compatible — change only `base_url` and `api_key` in agent configs.
 
-## Loop
+## Slack Channel Scheme
+
+| Channel | Purpose | Who posts |
+|---|---|---|
+| `#sprint-main` | Human → Hermes goals, approvals. Hermes posts plans and status. | Human + Hermes |
+| `#agent-orchestrator` | Hermes internal planning, dependency graphs, sprint status | Hermes |
+| `#agent-coder` | Hermes assigns tasks. OpenClaw works and reports here. | Hermes + OpenClaw |
+| `#ci-cd` | GitHub Actions results, build status, test pass/fail | Automated |
+| `#human-review` | Items needing human decision before proceeding | OpenClaw → Human |
+| `#agent-log` | Heartbeat, cron outputs, autonomous run proof | Both agents (auto) |
+
+## Human-in-the-Loop Flow
 
 ```
-human → #sprint-main → Hermes → plan
-Hermes → #agent-coder → OpenClaw → code
-OpenClaw → What I Did / What's Left / What Needs Your Call
-human → approve or redirect
+Human posts goal → #sprint-main → Hermes reads
+                                        ↓
+                              Hermes posts plan to #agent-orchestrator
+                              (does NOT assign until approved)
+                                        ↓
+                              Human approves in #sprint-main
+                                        ↓
+                              Hermes → #agent-coder → OpenClaw picks up task
+                                                            ↓
+                                              OpenClaw codes, commits, runs tests
+                                                            ↓
+                                              CI/CD posts result to #ci-cd
+                                                            ↓
+                                              OpenClaw posts to #human-review:
+                                              What I Did / What's Left / What Needs Your Call
+                                                            ↓
+                                              Human approves → merge
 ```
 
-Nothing happens in DMs. All decisions and outputs are in the channel record.
+## Quality Gate
 
-## Model routing
+GitHub Actions runs on every push:
+1. PHP 8.2 + Laravel migrations
+2. API health check (`GET /api/health`)
+3. React Vite build
+4. All must pass before human review
 
-| Agent | Model | Provider | Reason |
-|---|---|---|---|
-| Hermes | gemini-2.5-flash | Google AI Studio | Large context, strong at planning |
-| OpenClaw | openai/gpt-oss-120b | Groq | Fast inference, good at code |
-| OpenClaw fallback | qwen2.5-coder | Ollama (local) | Unlimited, no API dependency |
+## Tech Stack
 
-Fallback order on rate limit: Groq → Gemini → Ollama.
-
-## Stack
-
-- Backend: Laravel 11, SQLite, PHP 8.2
-- Frontend: React 18, Vite
-- Deploy: Vercel (frontend), Render (backend)
+- **Backend**: Laravel 12, PHP 8.2, SQLite
+- **Frontend**: React 18 + Vite, HashRouter for GitHub Pages
+- **Deployment**: GitHub Pages (frontend) + Cloudflare Tunnel (backend)
+- **Version control**: GitHub (public), incremental commits per feature
