@@ -28,8 +28,8 @@ const FALLBACK_BOARDS = [
 ]
 
 export default function BoardListPage() {
-  const [boardList, setBoardList] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [boardList, setBoardList] = useState(FALLBACK_BOARDS)
+  const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', color: COLORS[0] })
   const [saving, setSaving] = useState(false)
@@ -39,9 +39,8 @@ export default function BoardListPage() {
   useEffect(() => {
     boardsApi
       .list()
-      .then(r => setBoardList(r.data))
-      .catch(() => setBoardList(FALLBACK_BOARDS))
-      .finally(() => setLoading(false))
+      .then(r => { if (r.data && r.data.length > 0) setBoardList(r.data) })
+      .catch(() => {})
   }, [])
 
 
